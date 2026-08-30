@@ -1,10 +1,12 @@
 import os
 from django.core.management.base import BaseCommand
 from api.models import User
+from api.pqc_crypto import pqc
+from api.key_encryption import KeyEncryptionService
 
 
 class Command(BaseCommand):
-    help = "Create an initial admin user from environment variables, if one doesn't already exist. Safe to run on every deploy."
+    help = "Create an initial admin user with real PQC keys from environment variables, if one doesn't already exist. Safe to run on every deploy."
 
     def handle(self, *args, **options):
         username = os.environ.get('ADMIN_USERNAME')
@@ -25,7 +27,7 @@ class Command(BaseCommand):
             ))
             return
 
-        User.objects.create_superuser(
+        user = User.objects.create_superuser(
             username=username,
             email=email,
             password=password,
@@ -34,4 +36,23 @@ class Command(BaseCommand):
             role='admin',
             is_activated=True,
         )
-        self.stdout.write(self.style.SUCCESS(f'Created admin user: {username}'))
+
+        # === PQC keypair generation, encrypted with the same password used to log in ===
+        # Mirrors CreateUserView exactly, so this admin can decrypt/sign like any
+        # normally created user instead of hitting "no encrypted PQC keys" at login.
+        kem_keys = pqc.generate_kem_keypair()
+        sig_keys = pqc.generate_sig_keypair()
+        kem_encrypted = KeyEncryptionService.encrypt_key(kem_keys['secret_key'], password)
+        sig_encrypted = KeyEncryptionService.encrypt_key(sig_keys['secret_key'], password)
+        user.pqc_kem_public_key = kem_keys['public_key']
+        user.pqc_kem_secret_key_encrypted = kem_encrypted['encrypted_key']
+        user.pqc_kem_secret_key_salt = kem_encrypted['salt']
+        user.pqc_kem_secret_key_nonce = kem_encrypted['nonce']
+        user.pqc_sig_public_key = sig_keys['public_key']
+        user.pqc_sig_secret_key_encrypted = sig_encrypted['encrypted_key']
+        user.pqc_sig_secret_key_salt = sig_encrypted['salt']
+        user.pqc_sig_secret_key_nonce = sig_encrypted['nonce']
+        user.pqc_enabled = True
+        user.save()
+
+        self.stdout.write(self.style.SUCCESS(f'Created admin user with PQC keys: {username}'))
