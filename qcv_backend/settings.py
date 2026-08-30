@@ -176,6 +176,7 @@ if os.environ.get('SMTP_HOST'):
     EMAIL_USE_TLS = os.environ.get('SMTP_USE_TLS', 'True') == 'True'
     EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
     EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+    EMAIL_TIMEOUT = int(os.environ.get('SMTP_TIMEOUT', 10))
 else:
     # No SMTP configured — print emails to the console instead of failing.
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
