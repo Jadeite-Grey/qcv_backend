@@ -114,6 +114,10 @@ REST_FRAMEWORK = {
 SESSION_COOKIE_AGE = int(os.environ.get('SESSION_COOKIE_AGE', 28800))  # 8 hours, matches PQC key session
 SESSION_TIMEOUT_WARNING = int(os.environ.get('SESSION_TIMEOUT_WARNING', 300))  # warn 5 min before expiry
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
 
 # ==========================================
 # CORS (frontend dev server on :3000)
